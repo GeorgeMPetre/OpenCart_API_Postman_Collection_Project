@@ -1,0 +1,41 @@
+# ==============================================
+# OpenCart API — IEEE 829 POS/NEG (George Petre)
+# Git Hygiene File
+# ==============================================
+
+# ──────────── General System Files ────────────
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ──────────── Postman / Temporary Files ───────
+*.log
+*.bak
+*.tmp
+*.backup
+*.postman_data.json
+
+# ──────────── Node / Newman Artifacts ─────────
+node_modules/
+npm-debug.log
+package-lock.json
+
+# ──────────── Environment & Credentials ───────
+# (Do NOT upload real API keys or local credentials)
+environments/OpenCart Local — IEEE 829 (George).postman_environment.json
+environments/*.env.json
+*.env
+*.key
+*.secret
+
+# ──────────── Generated Reports / Results ─────
+reports/
+*.html
+*.htm
+*.csv
+*.jtl
+
+# ──────────── IDE / OS Metadata ───────────────
+.vscode/
+.idea/
+*.swp
