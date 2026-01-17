@@ -14,7 +14,7 @@ The collection can be executed either through the Postman interface or from the 
 
 Test results are exported into xlsx and JSON formats to provide a clear summary of execution, individual test outcomes, and response data. This makes it easy to review results outside Postman and keeps the project transparent.
 
-This project reflects how I approach API testing in practice: understand the workflow, test both success and failure paths, validate dependencies between calls, and document results clearly. It is intended as a learning and portfolio project rather than a production API benchmark.
+This project reflects how I approach API testing in practice: understand the workflow, test both success and failure paths, validate dependencies between calls, and document results clearly.
 
 Author: George Petre
 GitHub: [https://github.com/GeorgeMPetre](https://github.com/GeorgeMPetre)
