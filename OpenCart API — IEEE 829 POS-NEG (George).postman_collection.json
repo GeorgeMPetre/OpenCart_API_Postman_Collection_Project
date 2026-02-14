@@ -1,0 +1,1753 @@
+{
+	"info": {
+		"_postman_id": "2ebd199f-11f9-4072-b840-3cd57299e0db",
+		"name": "OpenCart API — IEEE 829 POS/NEG (George)",
+		"description": "Executable Postman collection structured per IEEE 829 principles: explicit POS/NEG cases, clear inputs/expected results, preconditions, postconditions, and chaining. Use Admin → System → Users → API (enable, generate key) and whitelist your IP. Run Auth → [API-LOGIN-POS-001] Login - Valid first.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40366886"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "[API-LOGIN-POS-001] Login - Valid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be: 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { ",
+									"    json = pm.response.json(); ",
+									"} catch(e) { ",
+									"    json = null; ",
+									"}",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"api_token captured\", function () {",
+									"  pm.expect(json && json.api_token).to.be.ok;",
+									"});",
+									"",
+									"if (json && json.api_token) {",
+									"  pm.collectionVariables.set(\"api_token\", json.api_token);",
+									"}",
+									"pm.collectionVariables.set(\"oc_sessid\", pm.cookies.get(\"OCSESSID\"));",
+									"",
+									"pm.test(\"Expected: Success: API session successfully started!\", function () {",
+									"    var responseJson = pm.response.json(); ",
+									"    pm.expect(responseJson.success).to.equal(\"Success: API session successfully started!\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "username",
+									"value": "{{api_username}}",
+									"type": "text"
+								},
+								{
+									"key": "key",
+									"value": "{{api_key}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/account/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"account",
+								"login"
+							]
+						},
+						"description": "Establish API session, expect 200, capture api_token."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-LOGIN-NEG-001] Login - GET not allowed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"405 Method Not Allowed\", function () {",
+									"  pm.expect(pm.response.code).to.equal(405);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/account/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"account",
+								"login"
+							]
+						},
+						"description": "Expect 405 or 400 for wrong method."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-LOGIN-NEG-002] Login - Missing key/username",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Login without key/username should fail\", function () {",
+									"    pm.expect(pm.response.code).to.equal(400);  ",
+									"    let json;",
+									"    try { ",
+									"        json = pm.response.json(); ",
+									"    } catch(e) { ",
+									"        json = null; ",
+									"    }",
+									"",
+									"    pm.expect(json).to.not.be.null;",
+									"",
+									"    ",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/account/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"account",
+								"login"
+							]
+						},
+						"description": "Expect 400 for missing credentials."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cart",
+			"item": [
+				{
+					"name": "[API-CART-POS-001] Cart - List Products (capture key)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be: 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"let products = [];",
+									"if (json && Array.isArray(json.products)) {",
+									"  products = json.products;",
+									"}",
+									"",
+									"",
+									"if (products.length > 0) {",
+									"  const last = products[products.length - 1];",
+									"  const key = last.key || last.cart_id || last.cart_key;",
+									"  if (key) pm.collectionVariables.set(\"product_key\", String(key));",
+									"  pm.test(\"Captured product_key\", function () {",
+									"    pm.expect(pm.collectionVariables.get(\"product_key\")).to.be.ok;",
+									"  });",
+									"}",
+									"",
+									"pm.test(\"Response contains 'products' list\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson).to.have.property('products').that.is.an('array', \"'products' is not an array\");",
+									"});",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart&api_token={{api_token}}"
+							]
+						},
+						"description": "List cart contents and capture product_key for edit/remove."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-POS-002] Cart - Add Product",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"product_id\", \"28\");",
+									"pm.collectionVariables.set(\"quantity\", \"1\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: Success: You have modified your shopping cart!\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson.success).to.equal(\"Success: You have modified your shopping cart!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "product_id",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "quantity",
+									"value": "{{quantity}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart|add&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart|add&api_token={{api_token}}"
+							]
+						},
+						"description": "Add product to cart (uses api_token)."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-POS-003] Cart - Remove by key",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"Expected: Success: You have modified your shopping cart!\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson.success).to.equal(\"Success: You have modified your shopping cart!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "product_id",
+									"value": "{{product_id}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart|remove&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart|remove&api_token={{api_token}}"
+							]
+						},
+						"description": "Remove product by captured key."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-POS-001a] Cart - Re-add product after cart deletion",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: Success: You have modified your shopping cart!\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson.success).to.equal(\"Success: You have modified your shopping cart!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "product_id",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "quantity",
+									"value": "{{quantity}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart|add&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart|add&api_token={{api_token}}"
+							]
+						},
+						"description": "Add product to cart (uses api_token)."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-NEG-001] Cart - Add invalid product_id",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test(\"Product not found error\", function () {",
+									"  pm.expect([200, 400]).to.include(pm.response.code);",
+									"",
+									"  const json = pm.response.json();",
+									"  pm.expect(json).to.have.nested.property(\"error.warning\", \"Warning: Product could not be found!\");",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "product_id",
+									"value": "9999999",
+									"type": "text"
+								},
+								{
+									"key": "quantity",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart|add&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart|add&api_token={{api_token}}"
+							]
+						},
+						"description": "Expect a client error for invalid product_id (implementation dependent)."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-NEG-002] Cart - List without token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cart list without token returns 404\", function () {",
+									"  pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"pm.test(\"Body is not empty (core not_found HTML)\", function () {",
+									"  const body = pm.response.text();",
+									"  pm.expect(body).to.be.a(\"string\").and.not.empty;",
+									"});",
+									"",
+									"// Optional: sanity check content type is HTML (typical for OC not_found)",
+									"pm.test(\"Content-Type indicates HTML\", function () {",
+									"  const ct = pm.response.headers.get(\"Content-Type\") || \"\";",
+									"  pm.expect(ct.toLowerCase()).to.include(\"text/html\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart"
+							]
+						},
+						"description": "Expect 401/403 when token is missing."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Customer",
+			"item": [
+				{
+					"name": "[API-CUSTOMER-POS-001] Customer - Set details",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"customer_firstname\", \"George\");",
+									"pm.collectionVariables.set(\"customer_lastname\", \"Petre\");",
+									"pm.collectionVariables.set(\"customer_email\", \"george.petre23@gmail.com\");",
+									"pm.collectionVariables.set(\"customer_phone\", \"+44 7518 493834\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: You have successfully modified customers\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson.success).to.equal(\"You have successfully modified customers\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "firstname",
+									"value": "{{customer_firstname}}",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "{{customer_lastname}}",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "{{customer_email}}",
+									"type": "text"
+								},
+								{
+									"key": "telephone",
+									"value": "{{customer_phone}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/customer&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"customer&api_token={{api_token}}"
+							]
+						},
+						"description": "Attach customer details to session."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Shipping",
+			"item": [
+				{
+					"name": "[API-SHIPPING-POS-001] Shipping - Set address",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"address_1\", \"221A Baker Street\");",
+									"pm.collectionVariables.set(\"city\", \"London\");",
+									"pm.collectionVariables.set(\"postcode\", \"CT20AA\");",
+									"pm.collectionVariables.set(\"country_id\", \"222\");",
+									"pm.collectionVariables.set(\"zone_id\", \"152\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"Shipping address set successfully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"success\");",
+									"    pm.expect(jsonData.success).to.eql(\"Success: Shipping address has been set!\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "firstname",
+									"value": "{{customer_firstname}}",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "{{customer_lastname}}",
+									"type": "text"
+								},
+								{
+									"key": "address_1",
+									"value": "{{address_1}}",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "{{city}}",
+									"type": "text"
+								},
+								{
+									"key": "country_id",
+									"value": "{{country_id}}",
+									"type": "text"
+								},
+								{
+									"key": "zone_id",
+									"value": "{{zone_id}}",
+									"type": "text"
+								},
+								{
+									"key": "postcode",
+									"value": "{{postcode}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/shipping_address&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"shipping_address&api_token={{api_token}}"
+							]
+						},
+						"description": "Set shipping address for the session."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-SHIPPING-POS-002] Shipping - Get methods",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"Response contains 'shipping_methods'\", function () {",
+									"    let jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"shipping_methods\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/shipping_method&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"shipping_method&api_token={{api_token}}"
+							]
+						},
+						"description": "Fetch available shipping methods."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-SHIPPING-POS-003] Shipping - Set method",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"shipping_method\", \"flat.flat\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: Success: Shipping method has been set!'\", function () {",
+									"    let jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"success\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "shipping_method",
+									"value": "{{shipping_method}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/shipping_method|save&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"shipping_method|save&api_token={{api_token}}"
+							]
+						},
+						"description": "Set a selected shipping method (ensure it exists)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payment",
+			"item": [
+				{
+					"name": "[API-PAYMENT-NEG-001] Payment - Set method before address",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be: 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Payment method required error\", function () {",
+									"    pm.expect(pm.response.code).to.equal(200);   ",
+									"",
+									"    let json;",
+									"    try { json = pm.response.json(); } catch(e) { json = null; }",
+									"    pm.expect(json).to.not.be.null;",
+									"",
+									"    pm.expect(json).to.have.property(\"error\", \"Warning: Payment method required!\");",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "payment_method",
+									"value": "{{payment_method}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/payment_method|save&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"payment_method|save&api_token={{api_token}}"
+							]
+						},
+						"description": "Expect a client error when address not set."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-PAYMENT-POS-001] Payment - Set address",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"address_1\", \"221A Baker Street\");",
+									"pm.collectionVariables.set(\"city\", \"London\");",
+									"pm.collectionVariables.set(\"postcode\", \"CT20AA\");",
+									"pm.collectionVariables.set(\"country_id\", \"222\");",
+									"pm.collectionVariables.set(\"zone_id\", \"152\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: Success: Payment address has been set!\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"success\");",
+									"    pm.expect(jsonData.success).to.eql(\"Success: Payment address has been set!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "firstname",
+									"value": "{{customer_firstname}}",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "{{customer_lastname}}",
+									"type": "text"
+								},
+								{
+									"key": "address_1",
+									"value": "{{address_1}}",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "{{city}}",
+									"type": "text"
+								},
+								{
+									"key": "country_id",
+									"value": "{{country_id}}",
+									"type": "text"
+								},
+								{
+									"key": "zone_id",
+									"value": "{{zone_id}}",
+									"type": "text"
+								},
+								{
+									"key": "postcode",
+									"value": "{{postcode}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/payment_address&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"payment_address&api_token={{api_token}}"
+							]
+						},
+						"description": "Set payment address for the session."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-PAYMENT-POS-002] Payment - Get methods",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Require api_token for this request",
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Response contains payment_methods\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"payment_methods\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/payment_method&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"payment_method&api_token={{api_token}}"
+							]
+						},
+						"description": "Fetch available payment methods."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-PAYMENT-POS-003] Payment - Set method",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"payment_method\", \"cod\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"pm.test(\"Expected: Success: Payment method has been set!\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property(\"success\");",
+									"    pm.expect(jsonData.success).to.eql(\"Success: Payment method has been set!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "payment_method",
+									"value": "{{payment_method}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/payment_method|save&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"payment_method|save&api_token={{api_token}}"
+							]
+						},
+						"description": "Set payment method."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Order",
+			"item": [
+				{
+					"name": "[API-ORDER-POS-001] Order - Create (capture order_id)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"comment\", \"Order created via API\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"pm.test(\"Response contains order_id and success\", function () {",
+									"    let raw = pm.response.text();",
+									"    let jsonData = null;",
+									"",
+									"    const jsonMatch = raw.match(/\\{[\\s\\S]*\\}$/); ",
+									"    if (jsonMatch) {",
+									"        try {",
+									"            jsonData = JSON.parse(jsonMatch[0]);",
+									"        } catch (e) {",
+									"            jsonData = null;",
+									"        }",
+									"    }",
+									"",
+									"    pm.expect(jsonData, \"Response should contain valid JSON\").to.not.be.null;",
+									"",
+									"    pm.expect(jsonData).to.have.property(\"success\");",
+									"    pm.expect(jsonData.success).to.be.a(\"string\");",
+									"",
+									"    pm.expect(jsonData).to.have.property(\"order_id\");",
+									"    pm.expect(jsonData.order_id).to.be.a(\"number\");",
+									"",
+									"    pm.collectionVariables.set(\"order_id\", String(jsonData.order_id));",
+									"});",
+									"",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "comment",
+									"value": "{{comment}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/order|confirm&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"order|confirm&api_token={{api_token}}"
+							]
+						},
+						"description": "Create order from current cart + shipping/payment context."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-LOGIN-POS-001] Login – Valid (Reset Session)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be: 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { ",
+									"    json = pm.response.json(); ",
+									"} catch(e) { ",
+									"    json = null; ",
+									"}",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"api_token captured\", function () {",
+									"  pm.expect(json && json.api_token).to.be.ok;",
+									"});",
+									"",
+									"if (json && json.api_token) {",
+									"  pm.collectionVariables.set(\"api_token\", json.api_token);",
+									"}",
+									"pm.collectionVariables.set(\"oc_sessid\", pm.cookies.get(\"OCSESSID\"));",
+									"",
+									"pm.test(\"Expected: Success: API session successfully started!\", function () {",
+									"    var responseJson = pm.response.json(); ",
+									"    pm.expect(responseJson.success).to.equal(\"Success: API session successfully started!\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "username",
+									"value": "{{api_username}}",
+									"type": "text"
+								},
+								{
+									"key": "key",
+									"value": "{{api_key}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/account/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"account",
+								"login"
+							]
+						},
+						"description": "Establish API session, expect 200, capture api_token."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-CART-POS-003] Cart – Remove by Key (Reset Session)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (!pm.collectionVariables.get(\"api_token\")) {",
+									"  throw new Error(\"api_token is not set. Run Auth → [API-LOGIN-POS-001] Login - Valid first.\");",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Expected status code to be 200 OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"});",
+									"",
+									"let json = null;",
+									"try { json = pm.response.json(); } catch(e) { json = null; }",
+									"",
+									"pm.test(\"Body parsed or text available\", function () {",
+									"  if (json === null) {",
+									"    pm.expect(pm.response.text()).to.not.equal(\"\");",
+									"  } else {",
+									"    pm.expect(",
+									"      Array.isArray(json) || typeof json === \"object\"",
+									"    ).to.be.true;",
+									"  }",
+									"});",
+									"",
+									"",
+									"pm.test(\"Expected: Success: You have modified your shopping cart!\", function () {",
+									"    var responseJson = pm.response.json();",
+									"",
+									"    pm.expect(responseJson.success).to.equal(\"Success: You have modified your shopping cart!\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "product_id",
+									"value": "{{product_id}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/cart|remove&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"cart|remove&api_token={{api_token}}"
+							]
+						},
+						"description": "Remove product by captured key."
+					},
+					"response": []
+				},
+				{
+					"name": "[API-ORDER-NEG-001] Order - Create without shipping/payment",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Validate required field errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"",
+									"    pm.expect(jsonData.error).to.have.property(\"product\", \"Warning: Products required!\");",
+									"    pm.expect(jsonData.error).to.have.property(\"customer\", \"Warning: Customer details required!\");",
+									"    pm.expect(jsonData.error).to.have.property(\"payment_method\", \"Warning: Payment method required!\");",
+									"});",
+									"",
+									"",
+									"const varsToClear = [",
+									"  \"api_token\",",
+									"  \"product_id\",",
+									"  \"quantity\",",
+									"  \"product_key\",",
+									"  \"customer_firstname\",",
+									"  \"customer_lastname\",",
+									"  \"customer_email\",",
+									"  \"customer_phone\",",
+									"  \"address_1\",",
+									"  \"city\",",
+									"  \"postcode\",",
+									"  \"country_id\",",
+									"  \"zone_id\",",
+									"  \"shipping_method\",",
+									"  \"payment_method\",",
+									"  \"order_id\",",
+									"  \"comment\",",
+									"  \"oc_sessid\"",
+									"];",
+									"",
+									"varsToClear.forEach(v => pm.collectionVariables.unset(v));"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "{{baseUrl}}/sale/order|confirm&api_token={{api_token}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sale",
+								"order|confirm&api_token={{api_token}}"
+							]
+						},
+						"description": "Expect a client error if shipping/payment not set."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
